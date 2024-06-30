@@ -2,6 +2,17 @@
 
 This application is an AI-powered assistant that integrates Python execution capabilities with React component rendering on the fly, offering a comprehensive environment for data analysis, visualization, and interactive web development.
 
+
+
+https://github.com/kturung/langgraph_streamlit_codeassistant/assets/37293938/cc64a6cd-ab31-4ad0-a490-48e4df08fba6
+
+
+
+
+https://github.com/kturung/langgraph_streamlit_codeassistant/assets/37293938/9e8476c5-5ac1-4d0e-964c-3985060e2647
+
+
+
 ## Key Features and Functionalities
 
 1. **Intelligent Chat Interface**: 
