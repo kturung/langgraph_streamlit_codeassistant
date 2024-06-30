@@ -1,0 +1,30 @@
+# Dependency directories
+node_modules/
+build/
+
+# Production build output
+/dist
+
+# Debug logs from npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional tsc command output
+*.tsbuildinfo
