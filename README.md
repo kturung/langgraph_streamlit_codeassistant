@@ -11,7 +11,9 @@ https://github.com/kturung/langgraph_streamlit_codeassistant/assets/37293938/bdc
 https://github.com/kturung/langgraph_streamlit_codeassistant/assets/37293938/cc64a6cd-ab31-4ad0-a490-48e4df08fba6
 
 
-
+| **New Feature** | Feature Description                           | Notes                                                                                                                                                                                                                   |
+|-----------------------|-----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **03.07.2024**        | **Multimodal Support (Vision Capability)**    | - **Enables the application** to process and analyze images  alongside text and code.<br>- **AI to generate from referanced images** for a wider range of tasks.<br>- **Integration**: Seamlessly added to existing framework. |
 
 
 ## Key Features and Functionalities
