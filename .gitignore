@@ -5,6 +5,8 @@ build/
 # Production build output
 /dist
 
+/uploaded_files
+
 # Debug logs from npm
 npm-debug.log*
 yarn-debug.log*
@@ -15,6 +17,10 @@ yarn-error.log*
 .vscode/
 *.swp
 *.swo
+.env
+
+src/App.js
+sandboxid.txt
 
 # Operating System Files
 .DS_Store
@@ -28,3 +34,7 @@ Thumbs.db
 
 # Optional tsc command output
 *.tsbuildinfo
+
+package-lock.json
+
+application.flag

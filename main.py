@@ -4,7 +4,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.graph import MessageGraph, END
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from e2b_code_interpreter import CodeInterpreter
 import base64
 import streamlit.components.v1 as components
@@ -104,7 +104,7 @@ class ReactInputSchema(BaseModel):
 def render_react(code: str):
     """Render a react component with the given code and return the render result."""
     cwd = os.getcwd()
-    with open(f"{cwd}\\src\\App.js", "w") as f:
+    with open(f"{cwd}\\src\\App.js", "w", encoding="utf-8") as f:
         f.write(code)
     filename = f"application.flag"
     with open(filename, "w") as f:
@@ -152,6 +152,7 @@ You are a Python and React expert. You can create React applications and run Pyt
 """}]
         st.session_state["filesuploaded"] = False
         st.session_state["tool_text_list"] = []
+        st.session_state["image_data"] = ""
         sandboxmain = CodeInterpreter.create()
         sandboxid = sandboxmain.id
         sandboxmain.keep_alive(300)
@@ -183,12 +184,18 @@ with st.sidebar:
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         for uploaded_file in uploaded_files:
+            _, file_extension = os.path.splitext(uploaded_file.name)
+            file_extension = file_extension.lower()
             file_path = os.path.join(save_path, uploaded_file.name)
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
             with open(file_path, "rb") as f:
                 remote_path = sandbox.upload_file(f)  
                 print(f"Uploaded file to {remote_path}")
+            if file_extension in ['.jpeg', '.jpg', '.png']:
+                file_path = os.path.join(save_path, uploaded_file.name)
+                with open(file_path, "rb") as f:
+                    st.session_state.image_data = base64.b64encode(f.read()).decode("utf-8")
         uploaded_file_names = [uploaded_file.name for uploaded_file in uploaded_files]
         uploaded_files_prompt = f"\n\nThese files are saved to disk. User may ask questions about them. {', '.join(uploaded_file_names)}"
         st.session_state["messages"][0]["content"] += uploaded_files_prompt
@@ -215,7 +222,19 @@ with col2:
 
     if user_prompt:
         messages.chat_message("user").write(user_prompt)
-        st.session_state.messages.append({"role": "user", "content": user_prompt})
+        if st.session_state.image_data:
+            st.session_state.messages.append(HumanMessage(
+            content=[
+                {"type": "text", "text": user_prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{st.session_state.image_data}"},
+                },
+            ],
+        ))
+            st.session_state.image_data = ""
+        else:
+            st.session_state.messages.append({"role": "user", "content": user_prompt})
         st.session_state.chat_history.append({"role": "user", "content": {"type": "text", "text": user_prompt}})
 
         thread = {"configurable": {"thread_id": "4"}}
