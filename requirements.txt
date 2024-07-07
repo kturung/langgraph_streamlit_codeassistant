@@ -1,7 +1,6 @@
 e2b_code_interpreter==0.0.10
 langchain==0.2.6
-langchain_anthropic==0.1.17
-langchain_core==0.2.10
-langgraph==0.1.4
-python-dotenv==1.0.1
+langchain_anthropic==0.1.19
+langchain_core==0.2.11
+langgraph==0.1.5
 streamlit==1.36.0
