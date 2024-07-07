@@ -11,6 +11,13 @@ import streamlit.components.v1 as components
 import subprocess
 from langchain.pydantic_v1 import BaseModel, Field
 import shutil
+import platform
+import time
+import threading
+import queue
+import re
+
+
 
 
 #get .env variables
@@ -21,21 +28,6 @@ st.set_page_config(layout="wide")
 
 col1, col2, col3, col4 = st.columns([0.05, 0.45, 0.05, 0.45])
 
-# This is to start the react visualization component
-@st.cache_resource
-def run_async_command():
-    if not st.session_state.get('command_run', False):
-        process = subprocess.Popen(
-            "npm start",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        st.session_state.process = process
-        st.session_state.command_run = True
-
-run_async_command()
 
 @tool
 def execute_python(code: str):
@@ -96,8 +88,31 @@ def send_file_to_user(filepath: str):
         f.write(file_in_bytes) 
     return "File sent to the user successfully."
 
+class NpmDepdencySchema(BaseModel):
+    package_names: str = Field(description="Name of the npm packages to install. Should be space-separated.")
+
+@tool("install_npm_dependencies", args_schema=NpmDepdencySchema ,return_direct=True)
+def install_npm_dependencies(package_names: str):
+    """Installs the given npm dependencies and returns the result of the installation."""
+    try:
+        # Split the package_names string into a list of individual package names
+        package_list = package_names.split()
+        # Construct the command with each package name as a separate argument
+        command = ["npm.cmd", "install"] + package_list
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        return f"Failed to install npm packages '{package_names}': {e.stderr}"
+    
+    return f"Successfully installed npm packages '{package_names}'"
+
 class ReactInputSchema(BaseModel):
-    code: str = Field(description="src/App.js code to render a react component.")
+    code: str = Field(description="src/App.js code to render a react component. Should not contain local file import statements.")
 
 # This is for agent to render react component on the fly with the given code
 @tool("render_react", args_schema=ReactInputSchema, return_direct=True)
@@ -106,12 +121,86 @@ def render_react(code: str):
     cwd = os.getcwd()
     with open(f"{cwd}\\src\\App.js", "w", encoding="utf-8") as f:
         f.write(code)
-    filename = f"application.flag"
-    with open(filename, "w") as f:
-        f.write("flag")
-    return "React component rendered successfully."
+    # Determine the appropriate command based on the operating system
+    npm_cmd = "npm.cmd" if platform.system() == "Windows" else "npm"
+    
+    # Start the React application
+    try:
+        if platform.system() == "Windows":
+            subprocess.run(["taskkill", "/F", "/IM", "node.exe"], check=True)
+        else:
+            subprocess.run(["pkill", "node"], check=True)
+    except subprocess.CalledProcessError:
+        pass
 
-tools = [execute_python, render_react, send_file_to_user]
+    output_queue = queue.Queue()
+    error_messages = []
+    success_pattern = re.compile(r'Compiled successfully|webpack compiled successfully')
+    error_pattern = re.compile(r'Failed to compile|Error:|ERROR in')
+    start_time = time.time()
+
+    def handle_output(stream, prefix):
+        for line in iter(stream.readline, ''):
+            output_queue.put(f"{prefix}: {line.strip()}")
+        stream.close()
+
+    try:
+        process = subprocess.Popen(
+            [npm_cmd, "start"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1
+        )
+
+        stdout_thread = threading.Thread(target=handle_output, args=(process.stdout, "stdout"))
+        stderr_thread = threading.Thread(target=handle_output, args=(process.stderr, "stderr"))
+
+        stdout_thread.start()
+        stderr_thread.start()
+
+        compilation_failed = False
+
+        while True:
+            try:
+                line = output_queue.get(timeout=5)  # Wait for 5 seconds for new output
+                print(line)  # Print the output for debugging
+
+                if success_pattern.search(line):
+                    with open("application.flag", "w") as f:
+                        f.write("flag")
+                    return "npm start completed successfully"
+
+                if error_pattern.search(line):
+                    compilation_failed = True
+                    error_messages.append(line)
+
+                if compilation_failed and "webpack compiled with" in line:
+                    return "npm start failed with errors:\n" + "\n".join(error_messages)
+
+            except queue.Empty:
+                # Check if we've exceeded the timeout
+                if time.time() - start_time > 30:
+                    return f"npm start process timed out after 30 seconds"
+
+            if not stdout_thread.is_alive() and not stderr_thread.is_alive():
+                # Both output streams have closed
+                break
+
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
+
+    if error_messages:
+        return "npm start failed with errors:\n" + "\n".join(error_messages)
+
+    with open("application.flag", "w") as f:
+        f.write("flag")
+    return "npm start completed without obvious errors or success messages"
+        
+        
+
+
+tools = [execute_python, render_react, send_file_to_user, install_npm_dependencies]
 
 # LangGraph to orchestrate the workflow of the chatbot
 @st.cache_resource
@@ -275,7 +364,7 @@ with col2:
 if os.path.exists("application.flag"):
     with col4:
         st.header('Application Preview')
-        react_app_url = "http://localhost:3000"
+        react_app_url = f"http://localhost:3000?t={int(time.time())}"
         components.iframe(src=react_app_url, height=700)
 
 if os.path.exists("downloads") and os.listdir("downloads"):
