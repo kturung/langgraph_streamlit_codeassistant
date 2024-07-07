@@ -97,8 +97,9 @@ def install_npm_dependencies(package_names: str):
     try:
         # Split the package_names string into a list of individual package names
         package_list = package_names.split()
+        npm_cmd = "npm.cmd" if platform.system() == "Windows" else "npm"
         # Construct the command with each package name as a separate argument
-        command = ["npm.cmd", "install"] + package_list
+        command = [npm_cmd, "install"] + package_list
         result = subprocess.run(
             command,
             stdout=subprocess.PIPE,
@@ -119,7 +120,8 @@ class ReactInputSchema(BaseModel):
 def render_react(code: str):
     """Render a react component with the given code and return the render result."""
     cwd = os.getcwd()
-    with open(f"{cwd}\\src\\App.js", "w", encoding="utf-8") as f:
+    file_path = os.path.join(cwd, "src", "App.js")
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(code)
     # Determine the appropriate command based on the operating system
     npm_cmd = "npm.cmd" if platform.system() == "Windows" else "npm"
