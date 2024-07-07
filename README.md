@@ -5,7 +5,11 @@ This application is an AI-powered assistant that integrates Python execution cap
 
 
 
-https://github.com/kturung/langgraph_streamlit_codeassistant/assets/37293938/bdc3e20e-cd74-4ab7-ac63-95158f5ce3e4
+
+
+
+https://github.com/kturung/langgraph_streamlit_codeassistant/assets/37293938/b38c2200-5744-4d07-b612-b2818cf848c1
+
 
 
 https://github.com/kturung/langgraph_streamlit_codeassistant/assets/37293938/cc64a6cd-ab31-4ad0-a490-48e4df08fba6
