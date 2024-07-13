@@ -113,7 +113,7 @@ def install_npm_dependencies(package_names: str):
     return f"Successfully installed npm packages '{package_names}'"
 
 class ReactInputSchema(BaseModel):
-    code: str = Field(description="src/App.js code to render a react component. Should not contain local file import statements.")
+    code: str = Field(description="Code to render a react component. Should not contain localfile import statements.")
 
 # This is for agent to render react component on the fly with the given code
 @tool("render_react", args_schema=ReactInputSchema, return_direct=True)
@@ -240,6 +240,7 @@ You are a Python and React expert. You can create React applications and run Pyt
 - You can run any python code you want, everything is running in a secure sandbox environment.
 - NEVER execute provided tools when you are asked to explain your code.
 - NEVER use `execute_python` tool when you are asked to create a react application. Use `render_react` tool instead.
+- Prioritize to use tailwindcss for styling your react components.
 """}]
         st.session_state["filesuploaded"] = False
         st.session_state["tool_text_list"] = []
@@ -271,7 +272,7 @@ with st.sidebar:
         with open("sandboxid.txt", "r") as f:
             sandboxid = f.read()
         sandbox = CodeInterpreter.reconnect(sandboxid)
-        save_path = f"{os.getcwd()}\\uploaded_files"
+        save_path = os.path.join(os.getcwd(), "uploaded_files")
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         for uploaded_file in uploaded_files:
