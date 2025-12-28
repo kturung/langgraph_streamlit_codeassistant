@@ -19,7 +19,6 @@ import re
 
 
 
-
 #get .env variables
 from dotenv import load_dotenv
 load_dotenv()
@@ -330,37 +329,76 @@ with col2:
         st.session_state.chat_history.append({"role": "user", "content": {"type": "text", "text": user_prompt}})
 
         thread = {"configurable": {"thread_id": "4"}}
-        aimessages = ""    
+
+        aimessages = ""
+        st.session_state["tool_text_list"] = []
         graph = create_graph()
-        for event in graph.stream(input=st.session_state.messages, config=thread, stream_mode="values"):
-            print(f"Event: {event}")
-            for message in reversed(event):
-                if not isinstance(message, AIMessage):
-                    break
-                else:
-                    if (message.tool_calls and isinstance(message.content, list)) or (message.tool_calls and isinstance(message.content, str)):
-                        if isinstance(message.content, list):
-                            print(f"Message: {str(message.content)}")
-                            for part in message.content:
-                                if 'text' in part:
-                                    aimessages += str(part['text']) + "\n"
-                                    st.session_state.tool_text_list.append({"type": "text", "text": part['text']})
-                                    messages.chat_message("assistant").markdown(part['text'])
-                        for tool_call in message.tool_calls:
-                            if "code" in tool_call["args"]:
-                                code_text = tool_call["args"]["code"]
-                                aimessages += code_text
-                                st.session_state.tool_text_list.append({"type": "code", "code": code_text})
-                                messages.chat_message("assistant").code(code_text)                               
+
+        status_text = messages.empty()
+        current_stage = "Thinking…"
+        status_text.markdown(f"**{current_stage}**")
+
+        for event in graph.stream(
+            input=st.session_state.messages,
+            config=thread,
+            stream_mode="values"
+        ):
+            for msg in reversed(event):
+                if not isinstance(msg, AIMessage):
+                    continue
+
+                # ---- TOOL STAGE ----
+                if msg.tool_calls:
+                    current_stage = "Calling tools…"
+                    status_text.markdown(f"**{current_stage}**")
+
+                    for tool_call in msg.tool_calls:
+                        tool_name = tool_call.get("name", "tool")
+
+                        if "code" in tool_call["args"]:
+                            code_text = tool_call["args"]["code"]
+                            messages.chat_message("assistant").code(code_text)
+                            st.session_state.tool_text_list.append(
+                                {"type": "code", "code": code_text}
+                            )
+                        else:
+                            messages.chat_message("assistant").markdown(
+                                f"Tool `{tool_name}` executed."
+                            )
+                            st.session_state.tool_text_list.append(
+                                {"type": "text", "text": f"Tool `{tool_name}` executed."}
+                            )
+
+                # ---- TEXT STREAMING ----
+                if msg.content:
+                    current_stage = "Responding…"
+                    status_text.markdown(f"**{current_stage}**")
+
+                    if os.path.exists("chart.png"):
+                        col4.header('Images')
+                        col4.image("chart.png")
+
+                    if isinstance(msg.content, list):
+                        for part in msg.content:
+                            if part.get("type") == "text":
+                                messages.chat_message("assistant").markdown(part["text"])
+                                st.session_state.tool_text_list.append(
+                                    {"type": "text", "text": part["text"]}
+                                )
+                                aimessages += part["text"] + "\n"
                     else:
-                        if os.path.exists("chart.png"):
-                            col4.header('Images')
-                            col4.image("chart.png")
-                        print(f"Message: {str(message.content)}")    
-                        aimessages += str(message.content)
-                        st.session_state.tool_text_list.append({"type": "text", "text": message.content})
-                        messages.chat_message("assistant").markdown(message.content)
-                        break
+                        messages.chat_message("assistant").markdown(msg.content)
+                        st.session_state.tool_text_list.append(
+                            {"type": "text", "text": msg.content}
+                        )
+                        aimessages += str(msg.content)
+
+        status_text.markdown("**Done ✅**")
+        time.sleep(0.5)
+        status_text.empty()
+
+
+
         st.session_state.messages.append({"role": "assistant", "content": aimessages})
         st.session_state.chat_history.append({"role": "assistant", "content": st.session_state.tool_text_list})
 
